@@ -1,13 +1,20 @@
 # Toolkit-RAG Installation Guide
 
+## Prerequisites
+
+Toolkit-RAG uses [rag_api](https://github.com/danny-avila/rag_api) as a submodule dependency. Make sure to clone with submodules or initialize them after cloning.
+
 ## Quick Start
 
 ### Option 1: Docker (Recommended)
 
 ```bash
-# Clone the repository
-git clone https://github.com/ersantana361/toolkit-rag.git
+# Clone the repository with submodules
+git clone --recursive https://github.com/ersantana361/toolkit-rag.git
 cd toolkit-rag
+
+# If you forgot --recursive, initialize submodules
+git submodule update --init --recursive
 
 # Start with default configuration (PostgreSQL + Ollama)
 docker compose up -d
@@ -26,19 +33,24 @@ python cli.py search "installation guide"
 ### Option 2: Local Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/ersantana361/toolkit-rag.git
+# Clone the repository with submodules
+git clone --recursive https://github.com/ersantana361/toolkit-rag.git
 cd toolkit-rag
 
-# Install client dependencies
+# Install toolkit-rag client dependencies
 pip install -r requirements.txt
 
-# For full server functionality
-pip install -e ".[server]"
+# Install rag_api server dependencies
+pip install -r rag_api/requirements.txt
+
+# Start the rag_api server locally
+python rag_api/main.py
 
 # Set up external services (PostgreSQL with pgvector)
 # See deployment guides for different configurations
 ```
+
+**Note**: Local installation requires setting up PostgreSQL with pgvector and an embeddings service (Ollama/OpenAI) separately.
 
 ## Deployment Options
 

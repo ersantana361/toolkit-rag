@@ -2,7 +2,21 @@
 
 ## Overview
 
-Toolkit-RAG is designed to be easily integrated into any application, CLI tool, or AI assistant. This guide shows various integration patterns and examples.
+Toolkit-RAG is designed to be easily integrated into any application, CLI tool, or AI assistant. Built as a client/wrapper around [rag_api](https://github.com/danny-avila/rag_api), it provides a clean, framework-agnostic interface while leveraging a proven, battle-tested RAG implementation.
+
+## Architecture
+
+```
+Your Application
+      ↓
+  toolkit-rag (client wrapper)
+      ↓  
+  rag_api (FastAPI server - submodule)
+      ↓
+  Database + Vector Store
+```
+
+This guide shows various integration patterns and examples.
 
 ## Integration Patterns
 
@@ -107,32 +121,53 @@ fi
 
 ### 4. Git Submodule Integration
 
-Adding Toolkit-RAG as a submodule to your project.
+Adding Toolkit-RAG as a submodule to your project. This is the recommended pattern for tight integration.
 
 ```bash
-# Add as submodule
+# Add as submodule (includes rag_api dependency)
 git submodule add https://github.com/ersantana361/toolkit-rag.git rag
 git submodule update --init --recursive
 
 # Project structure
 your-project/
 ├── rag/                    # Toolkit-RAG submodule
+│   ├── rag_api/           # danny-avila/rag_api (nested submodule)
+│   ├── rag_client/        # Generic client wrapper
+│   └── docker/            # Server deployment configs
 ├── src/
 ├── docs/
-└── bridge.py               # Your custom bridge
+└── my_rag_bridge.py       # Your custom bridge
 
 # Custom bridge example
-from rag.rag_client import RAGClient
+import sys
+from pathlib import Path
+
+# Add toolkit-rag to path
+sys.path.insert(0, str(Path(__file__).parent / "rag"))
+
+from rag_client import RAGClient, RAGConfig
 
 class MyProjectRAGBridge:
     def __init__(self):
-        self.client = RAGClient()
+        config = RAGConfig(
+            api_url="http://localhost:8000",
+            project_id="my-project"
+        )
+        self.client = RAGClient(config)
     
-    def search_with_context(self, query):
+    async def search_with_context(self, query):
         # Add project-specific enhancements
         enhanced_query = self.enhance_query(query)
         results = await self.client.search(enhanced_query)
         return self.format_results(results)
+    
+    def enhance_query(self, query):
+        # Project-specific query enhancement logic
+        return f"{query} project-context"
+    
+    def format_results(self, results):
+        # Project-specific result formatting
+        return results
 ```
 
 ## Framework-Specific Integrations
