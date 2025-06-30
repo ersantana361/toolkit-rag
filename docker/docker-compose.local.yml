@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  # Local Ollama Embedding Service
+  ollama:
+    image: ollama/ollama:latest
+    container_name: superclaude-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # PostgreSQL Vector Database
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: superclaude-postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=superclaude_rag
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=supersecure
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d superclaude_rag"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # RAG API with Ollama
+  superclaude-rag:
+    build: 
+      context: ../rag_api
+      dockerfile: Dockerfile
+      network: host
+    container_name: superclaude-rag-api
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    environment:
+      - VECTOR_DB_TYPE=pgvector
+      - POSTGRES_DB=superclaude_rag
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=supersecure
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - COLLECTION_NAME=superclaude_vectors
+      - EMBEDDINGS_PROVIDER=ollama
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - EMBEDDINGS_MODEL=nomic-embed-text
+      - EMBEDDING_DIMENSIONS=768
+      - CHUNK_SIZE=1000
+      - CHUNK_OVERLAP=200
+      - RAG_HOST=0.0.0.0
+      - RAG_PORT=8000
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Initialize Ollama model
+  ollama-init:
+    image: curlimages/curl:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo 'Pulling nomic-embed-text model...' &&
+        curl -X POST http://ollama:11434/api/pull -d '{\"name\":\"nomic-embed-text\"}' &&
+        echo 'Model ready!'
+      "
+    restart: "no"
+
+volumes:
+  postgres_data:
+  ollama_data:

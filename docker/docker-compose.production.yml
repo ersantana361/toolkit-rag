@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  # RAG API with MongoDB Atlas (Production)
+  superclaude-rag:
+    build: 
+      context: ../rag_api
+      dockerfile: Dockerfile
+    container_name: superclaude-rag-api
+    ports:
+      - "8000:8000"
+    environment:
+      - VECTOR_DB_TYPE=atlas-mongo
+      - ATLAS_MONGO_DB_URI=${ATLAS_MONGO_DB_URI}
+      - COLLECTION_NAME=superclaude_vectors
+      - ATLAS_SEARCH_INDEX=superclaude_vector_index
+      - RAG_OPENAI_API_KEY=${RAG_OPENAI_API_KEY}
+      - EMBEDDINGS_MODEL=text-embedding-3-small
+      - EMBEDDING_DIMENSIONS=1536
+      - CHUNK_SIZE=1000
+      - CHUNK_OVERLAP=200
+      - RAG_HOST=0.0.0.0
+      - RAG_PORT=8000
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

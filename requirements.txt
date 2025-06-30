@@ -1,0 +1,22 @@
+# Toolkit-RAG Core Dependencies
+# Client and CLI dependencies
+
+# Core HTTP and async
+aiohttp>=3.8.0
+asyncio>=3.4.3
+
+# Configuration and environment
+python-dotenv>=1.0.1
+pydantic>=2.9.0
+
+# CLI interface
+click>=8.0.0
+rich>=13.0.0
+
+# Data handling
+pathlib2>=2.3.7; python_version < "3.4"
+
+# Optional server dependencies (install with: pip install -e ".[server]")
+# fastapi>=0.115.0
+# uvicorn>=0.28.0
+# See pyproject.toml for full server dependencies

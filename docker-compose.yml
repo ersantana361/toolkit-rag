@@ -1,0 +1,81 @@
+# Toolkit-RAG Default Docker Compose
+# Local deployment with PostgreSQL/pgvector and Ollama embeddings
+
+version: '3.8'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: toolkit-rag-postgres
+    environment:
+      POSTGRES_DB: toolkit_rag
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: supersecure
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - rag-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d toolkit_rag"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: toolkit-rag-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - rag-network
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  rag-api:
+    build:
+      context: ./rag_server
+      dockerfile: Dockerfile
+    container_name: toolkit-rag-api
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=toolkit_rag
+      - DB_USER=admin
+      - DB_PASSWORD=supersecure
+      - VECTOR_DB_TYPE=pgvector
+      - EMBEDDINGS_MODEL=ollama
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=nomic-embed-text
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - rag-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  postgres_data:
+  ollama_data:
+
+networks:
+  rag-network:
+    driver: bridge
