@@ -1,3 +1,3 @@
 [submodule "rag_api"]
 	path = rag_api
-	url = https://github.com/danny-avila/rag_api.git
+	url = git@github-personal.com:ersantana361/rag_api.git
