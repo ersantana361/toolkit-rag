@@ -69,6 +69,7 @@ services:
       - CHUNK_OVERLAP=200
       - RAG_HOST=0.0.0.0
       - RAG_PORT=8000
+      - JWT_SECRET=development-secret-key-change-in-production
     volumes:
       - ./uploads:/app/uploads
       - ./logs:/app/logs

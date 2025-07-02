@@ -140,24 +140,10 @@ class SuperClaudeRAGClient:
 
     async def _hybrid_search(self, query: str, limit: int, filters: Dict) -> List[Dict]:
         """Perform hybrid search combining semantic and keyword search"""
-        search_data = {
-            'query': query,
-            'limit': limit,
-            'project_id': self.config.project_id,
-            'search_type': 'hybrid'
-        }
-        
-        if filters:
-            search_data['filters'] = filters
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.post(f"{self.config.api_url}/search/hybrid", 
-                                  json=search_data) as response:
-                if response.status == 200:
-                    return await response.json()
-                else:
-                    self.logger.error(f"Hybrid search failed: {await response.text()}")
-                    return []
+        # For now, use the same semantic search since /search/hybrid doesn't exist
+        # This could be enhanced in the future by combining multiple search strategies
+        self.logger.info("Using semantic search for hybrid mode (hybrid endpoint not available)")
+        return await self.processor.search_documents(query, limit, filters)
 
     async def find_similar(self, file_path: str, limit: int = 5) -> List[Dict]:
         """

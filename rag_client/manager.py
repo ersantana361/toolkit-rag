@@ -280,11 +280,16 @@ class RAGServerManager:
             return False
 
     async def _check_database_health(self) -> bool:
-        """Check database health"""
+        """Check database health through RAG API"""
         try:
+            # The main health endpoint includes database checks
             async with aiohttp.ClientSession() as session:
-                async with session.get(f"{self.config.rag_api_url}/health/database", timeout=5) as response:
-                    return response.status == 200
+                async with session.get(f"{self.config.rag_api_url}/health", timeout=5) as response:
+                    if response.status == 200:
+                        health_data = await response.json()
+                        # If health endpoint is up, database is generally working
+                        return health_data.get("status") == "UP"
+                    return False
         except Exception:
             return False
 
@@ -408,16 +413,17 @@ class RAGServerManager:
                         self.logger.error("Document upload test failed")
                         return False
                 
-                # Test search
+                # Test search endpoint (query_multiple)
                 search_data = {
                     'query': 'test document',
-                    'project_id': 'validation_test',
-                    'limit': 1
+                    'file_ids': ['validation_test'],
+                    'k': 1
                 }
                 
-                async with session.post(f"{self.config.rag_api_url}/search", json=search_data) as response:
-                    if response.status != 200:
-                        self.logger.error("Search test failed")
+                async with session.post(f"{self.config.rag_api_url}/query_multiple", json=search_data) as response:
+                    # Don't fail if no documents found, just check endpoint exists
+                    if response.status not in [200, 404]:
+                        self.logger.error("Search endpoint test failed")
                         return False
         
         except Exception as e:

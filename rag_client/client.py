@@ -117,24 +117,27 @@ class RAGClient:
         try:
             search_project_id = project_id or self.config.project_id
             
-            search_data = {
-                "query": query,
-                "project_id": search_project_id,
-                "limit": limit,
-                "mode": mode.value
-            }
-            
-            if file_types:
-                search_data["file_types"] = file_types
-            if languages:
-                search_data["languages"] = languages
-            
             async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{self.config.api_url}/search",
-                    json=search_data,
-                    timeout=self.config.timeout
-                ) as response:
+                # First get all available file IDs
+                async with session.get(f"{self.config.api_url}/ids") as ids_response:
+                    if ids_response.status != 200:
+                        self.logger.error("Failed to get file IDs")
+                        return []
+                    
+                    file_ids = await ids_response.json()
+                    if not file_ids:
+                        self.logger.warning("No indexed files found")
+                        return []
+                
+                # Use query_multiple endpoint to search across all files
+                query_data = {
+                    'query': query,
+                    'file_ids': file_ids,
+                    'k': limit
+                }
+                
+                async with session.post(f"{self.config.api_url}/query_multiple", 
+                                      json=query_data) as response:
                     if response.status == 200:
                         return await response.json()
                     else:
@@ -161,7 +164,7 @@ class RAGClient:
             
             async with aiohttp.ClientSession() as session:
                 async with session.get(
-                    f"{self.config.api_url}/projects/{stats_project_id}/stats",
+                    f"{self.config.api_url}/stats/{stats_project_id}",
                     timeout=self.config.timeout
                 ) as response:
                     if response.status == 200:

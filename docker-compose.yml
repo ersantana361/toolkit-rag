@@ -35,7 +35,7 @@ services:
     environment:
       - OLLAMA_HOST=0.0.0.0:11434
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD", "ollama", "list"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -44,17 +44,22 @@ services:
     build:
       context: ./rag_api
       dockerfile: Dockerfile
+      network: host
     container_name: toolkit-rag-api
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
-      - DB_NAME=toolkit_rag
-      - DB_USER=admin
-      - DB_PASSWORD=supersecure
+      - POSTGRES_DB=toolkit_rag
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=supersecure
       - VECTOR_DB_TYPE=pgvector
-      - EMBEDDINGS_MODEL=ollama
+      - EMBEDDINGS_PROVIDER=ollama
       - OLLAMA_HOST=http://ollama:11434
       - OLLAMA_MODEL=nomic-embed-text
+      - JWT_SECRET=development-secret-key-change-in-production
     ports:
       - "8000:8000"
     depends_on:

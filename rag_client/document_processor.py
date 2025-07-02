@@ -190,6 +190,7 @@ class SuperClaudeDocumentProcessor:
         Returns:
             Dict with statistics about the indexing operation
         """
+        print("🚀 DEBUG: Starting index_project method", flush=True)
         self.logger.info(f"Starting project indexing: {project_path}")
         
         project_path = Path(project_path)
@@ -230,6 +231,10 @@ class SuperClaudeDocumentProcessor:
             'by_type': {}
         }
         
+        # Force immediate progress bar display
+        print(f"\n📊 Indexing Progress: 0/{len(files_to_process)} files processed", flush=True)
+        print("", flush=True)  # Ensure it's displayed immediately
+        
         async with aiohttp.ClientSession() as session:
             for i in range(0, len(files_to_process), batch_size):
                 batch = files_to_process[i:i + batch_size]
@@ -252,7 +257,14 @@ class SuperClaudeDocumentProcessor:
                     else:
                         stats['failed'] += 1
                 
-                self.logger.info(f"Processed batch {i//batch_size + 1}/{(len(files_to_process) - 1)//batch_size + 1}")
+                # Show progress with progress bar
+                processed = stats['successful'] + stats['failed']
+                progress_percent = (processed / len(files_to_process)) * 100
+                progress_bar = "█" * int(progress_percent / 5) + "░" * (20 - int(progress_percent / 5))
+                
+                print(f"\r📊 Indexing Progress: {processed}/{len(files_to_process)} files [{progress_bar}] {progress_percent:.1f}% (✅ {stats['successful']} ❌ {stats['failed']})", end="", flush=True)
+        
+        print()  # New line after progress bar
         
         self.logger.info(f"Indexing complete. Success: {stats['successful']}, Failed: {stats['failed']}")
         return stats
@@ -312,11 +324,11 @@ class SuperClaudeDocumentProcessor:
     async def get_project_stats(self) -> Dict:
         """Get statistics about the indexed project"""
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{self.rag_api_url}/projects/{self.project_id}/stats") as response:
+            async with session.get(f"{self.rag_api_url}/stats/{self.project_id}") as response:
                 if response.status == 200:
                     return await response.json()
                 else:
-                    return {'error': 'Failed to get project stats'}
+                    return {'error': f'HTTP {response.status}'}
 
     async def health_check(self) -> bool:
         """Check if the RAG API is healthy"""

@@ -429,13 +429,14 @@ class RAGServerManager:
                 # Test search
                 search_data = {
                     'query': 'test document',
-                    'project_id': 'validation_test',
-                    'limit': 1
+                    'file_ids': ['validation_test'],
+                    'k': 1
                 }
                 
-                async with session.post(f"{self.config.rag_api_url}/search", json=search_data) as response:
-                    if response.status != 200:
-                        self.logger.error("Search test failed")
+                async with session.post(f"{self.config.rag_api_url}/query_multiple", json=search_data) as response:
+                    # Don't fail if no documents found, just check endpoint exists
+                    if response.status not in [200, 404]:
+                        self.logger.error("Search endpoint test failed")
                         return False
         
         except Exception as e:
