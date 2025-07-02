@@ -164,15 +164,54 @@ check_prerequisites() {
 # Function: update_submodules
 update_submodules() {
     if [[ "$UPDATE_SUBMODULES" = true ]]; then
-        log_info "Updating git submodules..."
+        log_info "Checking git submodules..."
+        
         if [[ "$DRY_RUN" = true ]]; then
-            log_verbose "Would run: git submodule update --init --recursive"
+            log_verbose "Would check and update submodules"
+            return 0
+        fi
+        
+        # Check if .gitmodules exists
+        if [[ ! -f ".gitmodules" ]]; then
+            log_verbose "No submodules defined"
+            return 0
+        fi
+        
+        # Check if rag_api submodule is properly initialized
+        local submodule_needs_update=false
+        
+        if [[ -d "rag_api" ]]; then
+            if [[ -d "rag_api/.git" ]] || [[ -f "rag_api/.git" ]]; then
+                log_verbose "rag_api submodule already initialized"
+            else
+                log_verbose "rag_api directory exists but not initialized as submodule"
+                submodule_needs_update=true
+            fi
         else
-            if git submodule update --init --recursive; then
+            log_verbose "rag_api submodule missing"
+            submodule_needs_update=true
+        fi
+        
+        if [[ "$submodule_needs_update" = true ]]; then
+            log_info "Initializing submodules..."
+            
+            # Capture both stdout and stderr for better error reporting
+            submodule_output=$(git submodule update --init --recursive 2>&1)
+            submodule_exit_code=$?
+            
+            if [[ $submodule_exit_code -eq 0 ]]; then
                 log_success "Submodules updated successfully"
             else
-                log_warning "Submodule update failed, continuing anyway"
+                log_warning "Submodule update encountered issues:"
+                log_warning "$submodule_output"
+                log_warning "This might be due to:"
+                log_warning "  • Network connectivity issues"
+                log_warning "  • SSH key configuration for git@github-personal.com"
+                log_warning "  • Repository access permissions"
+                log_info "Continuing anyway (rag_api might be available as regular directory)"
             fi
+        else
+            log_success "All submodules are properly initialized"
         fi
     fi
 }
