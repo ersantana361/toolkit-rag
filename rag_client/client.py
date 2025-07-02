@@ -161,7 +161,7 @@ class RAGClient:
             
             async with aiohttp.ClientSession() as session:
                 async with session.get(
-                    f"{self.config.api_url}/stats/{stats_project_id}",
+                    f"{self.config.api_url}/projects/{stats_project_id}/stats",
                     timeout=self.config.timeout
                 ) as response:
                     if response.status == 200:

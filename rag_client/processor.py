@@ -156,21 +156,18 @@ class DocumentProcessor:
             with open(file_path, 'rb') as f:
                 file_content = f.read()
             
-            # Create form data
+            # Create form data for embed endpoint
+            import hashlib
+            file_id = hashlib.md5(str(file_path).encode()).hexdigest()[:10] + "_" + file_path.name.replace('.', '_')
+            
             form_data = aiohttp.FormData()
+            form_data.add_field('file_id', file_id)
+            form_data.add_field('entity_id', metadata.project_id)
             form_data.add_field('file', file_content, filename=file_path.name)
-            form_data.add_field('project_id', metadata.project_id)
-            form_data.add_field('metadata', json.dumps({
-                'source': str(file_path),
-                'file_type': metadata.file_type.value,
-                'language': metadata.language,
-                'size': metadata.size,
-                'last_modified': metadata.last_modified
-            }))
             
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    f"{self.rag_api_url}/documents",
+                    f"{self.rag_api_url}/embed",
                     data=form_data,
                     timeout=60
                 ) as response:

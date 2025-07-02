@@ -156,7 +156,7 @@ class SuperClaudeDocumentProcessor:
                 
                 form_data = aiohttp.FormData()
                 form_data.add_field('file_id', file_id)
-                form_data.add_field('project_id', self.project_id)
+                form_data.add_field('entity_id', self.project_id)
                 form_data.add_field('file', file, filename=Path(file_path).name)
                 
                 async with session.post(f"{self.rag_api_url}/embed", 

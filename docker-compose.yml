@@ -42,7 +42,7 @@ services:
 
   rag-api:
     build:
-      context: ./rag_server
+      context: ./rag_api
       dockerfile: Dockerfile
     container_name: toolkit-rag-api
     environment:
