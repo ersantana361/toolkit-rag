@@ -6,7 +6,7 @@ http://localhost:8000
 ```
 
 ## Authentication
-Currently, Toolkit-RAG uses project-based isolation rather than authentication. Each request should include a `project_id` to isolate data between different projects or applications.
+Toolkit-RAG uses JWT tokens for security in production environments. For development, authentication can be bypassed with the development JWT secret. The system also supports project-based isolation.
 
 ## Core Endpoints
 
@@ -48,20 +48,20 @@ GET /health/database
 Index a single document for semantic search.
 
 ```http
-POST /documents
+POST /embed
 Content-Type: multipart/form-data
 ```
 
 **Parameters:**
 - `file` (file): Document file to upload
-- `project_id` (string): Project identifier for isolation
+- `file_id` (string): Unique identifier for the file
 - `metadata` (string, optional): JSON string with additional metadata
 
 **Example:**
 ```bash
-curl -X POST "http://localhost:8000/documents" \
+curl -X POST "http://localhost:8000/embed" \
   -F "file=@document.pdf" \
-  -F "project_id=my-project" \
+  -F "file_id=my-document" \
   -F "metadata={\"source\": \"/path/to/document.pdf\", \"type\": \"documentation\"}"
 ```
 
@@ -78,28 +78,20 @@ curl -X POST "http://localhost:8000/documents" \
 ```
 
 ### List Documents
-Get all documents for a project.
+Get all indexed file IDs.
 
 ```http
-GET /documents/{project_id}
+GET /ids
 ```
 
 **Response:**
 ```json
-{
-  "project_id": "my-project",
-  "total_documents": 10,
-  "total_chunks": 150,
-  "documents": [
-    {
-      "id": "doc_12345",
-      "filename": "document.pdf",
-      "size": 1024,
-      "chunks": 5,
-      "created_at": "2024-01-01T12:00:00Z"
-    }
-  ]
-}
+[
+  "document1",
+  "readme", 
+  "config-file",
+  "user-manual"
+]
 ```
 
 ### Delete Document
@@ -137,10 +129,10 @@ DELETE /projects/{project_id}
 ## Search Operations
 
 ### Semantic Search
-Search documents using vector similarity.
+Search across multiple documents using vector similarity.
 
 ```http
-POST /search
+POST /query_multiple
 Content-Type: application/json
 ```
 
@@ -148,81 +140,63 @@ Content-Type: application/json
 ```json
 {
   "query": "authentication patterns",
-  "project_id": "my-project",
-  "mode": "semantic",
-  "limit": 5,
-  "min_score": 0.1,
-  "file_types": ["code", "documentation"],
-  "languages": ["python", "javascript"]
+  "file_ids": ["document1", "readme", "config-file"],
+  "k": 5
 }
 ```
 
 **Parameters:**
 - `query` (string, required): Search query
-- `project_id` (string, required): Project identifier
-- `mode` (string): Search mode - "semantic", "hybrid", or "keyword" (default: "semantic")
-- `limit` (integer): Maximum results to return (default: 10, max: 100)
-- `min_score` (float): Minimum similarity score (default: 0.1)
-- `file_types` (array): Filter by file types
-- `languages` (array): Filter by programming languages
+- `file_ids` (array, required): List of file IDs to search within
+- `k` (integer): Maximum results to return (default: 5)
 
 **Response:**
 ```json
 {
   "query": "authentication patterns",
-  "mode": "semantic",
-  "total_results": 3,
   "results": [
     {
-      "document_id": "doc_12345",
-      "chunk_id": "chunk_67890",
+      "file_id": "document1",
       "score": 0.89,
       "content": "Authentication patterns in modern applications...",
       "metadata": {
         "source": "/path/to/auth.py",
         "file_type": "code",
-        "language": "python",
-        "line_start": 45,
-        "line_end": 60
+        "language": "python"
       }
     }
   ]
 }
 ```
 
-### Batch Search
-Search multiple queries in a single request.
+### Single File Query
+Search within a specific file.
 
 ```http
-POST /search/batch
+POST /query_file/{file_id}
 Content-Type: application/json
 ```
 
 **Request Body:**
 ```json
 {
-  "queries": [
-    "authentication patterns",
-    "error handling",
-    "database connections"
-  ],
-  "project_id": "my-project",
-  "mode": "semantic",
-  "limit": 5
+  "query": "authentication patterns",
+  "k": 5
 }
 ```
 
 **Response:**
 ```json
 {
+  "file_id": "document1",
+  "query": "authentication patterns",
   "results": [
     {
-      "query": "authentication patterns",
-      "results": [...]
-    },
-    {
-      "query": "error handling", 
-      "results": [...]
+      "score": 0.89,
+      "content": "Authentication patterns in modern applications...",
+      "metadata": {
+        "source": "/path/to/auth.py"
+      }
     }
   ]
 }

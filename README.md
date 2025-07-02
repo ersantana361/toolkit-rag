@@ -1,17 +1,17 @@
 # Toolkit-RAG
 
-A generic, API-first RAG (Retrieval-Augmented Generation) system designed for integration with any application, CLI tool, or AI assistant. Built as a client/wrapper around the proven [rag_api](https://github.com/danny-avila/rag_api) implementation.
+A comprehensive RAG (Retrieval-Augmented Generation) system designed for integration with any application, CLI tool, or AI assistant. Built around a forked and enhanced version of [rag_api](https://github.com/ersantana361/rag_api) with SuperClaude-specific improvements.
 
 ## Overview
 
-Toolkit-RAG provides document indexing, vector search, and semantic retrieval as a reusable service. It features:
+Toolkit-RAG provides document indexing, vector search, and semantic retrieval as a production-ready service. It features:
 
-- **Zero Code Duplication**: Uses original [rag_api](https://github.com/danny-avila/rag_api) as submodule dependency
-- **Generic Architecture**: Framework-agnostic design for universal adoption
-- **Multiple Backends**: PostgreSQL/pgvector, MongoDB, local embeddings via rag_api
-- **Flexible Deployment**: Docker, local, and cloud deployment options
-- **Upstream Benefits**: Automatically benefits from rag_api updates
-- **REST API**: Standard HTTP API for any client integration
+- **Enhanced RAG API**: Forked rag_api with SuperClaude optimizations and bug fixes
+- **Docker-First Architecture**: Containerized deployment with multiple configuration options
+- **Multiple Backends**: PostgreSQL/pgvector, MongoDB Atlas, local Ollama embeddings
+- **Flexible Deployment**: Docker Compose, local, and cloud deployment options
+- **Production Ready**: Health checks, restart policies, and robust error handling
+- **REST API**: Standard HTTP API for universal client integration
 
 ## Quick Start
 
@@ -20,26 +20,35 @@ Toolkit-RAG provides document indexing, vector search, and semantic retrieval as
 git clone --recursive https://github.com/ersantana361/toolkit-rag.git
 cd toolkit-rag
 
-# Initialize submodules if not using --recursive
-git submodule update --init --recursive
-
 # Start with Docker (recommended)
 docker compose up -d
 
-# Or install locally (requires rag_api submodule)
-pip install -r requirements.txt
-pip install -r rag_api/requirements.txt
-python rag_api/main.py
+# Check system health
+curl http://localhost:8000/health
 
 # Index documents
-curl -X POST "http://localhost:8000/documents" \
+curl -X POST "http://localhost:8000/embed" \
   -F "file=@document.pdf" \
-  -F "project_id=my-project"
+  -F "file_id=my-document"
 
-# Search documents
-curl -X POST "http://localhost:8000/search" \
+# Search documents (using query_multiple endpoint)
+curl -X POST "http://localhost:8000/query_multiple" \
   -H "Content-Type: application/json" \
-  -d '{"query": "search terms", "project_id": "my-project"}'
+  -d '{"query": "search terms", "file_ids": ["my-document"], "k": 5}'
+```
+
+## Network Troubleshooting
+
+If you encounter Ollama model download issues:
+
+```bash
+# Check connectivity to Ollama registry
+curl -I https://registry.ollama.ai
+
+# If connection fails, try:
+# 1. Different network (mobile hotspot)
+# 2. VPN connection
+# 3. Different DNS servers in docker-compose.yml
 ```
 
 ## Architecture

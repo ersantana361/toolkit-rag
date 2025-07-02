@@ -2,11 +2,15 @@
 
 ## Prerequisites
 
-Toolkit-RAG uses [rag_api](https://github.com/danny-avila/rag_api) as a submodule dependency. Make sure to clone with submodules or initialize them after cloning.
+- Docker and Docker Compose
+- Git with submodule support
+- Network access to Ollama registry (registry.ollama.ai)
+
+Toolkit-RAG uses a forked and enhanced version of [rag_api](https://github.com/ersantana361/rag_api) as a submodule dependency.
 
 ## Quick Start
 
-### Option 1: Docker (Recommended)
+### Docker Installation (Recommended)
 
 ```bash
 # Clone the repository with submodules
@@ -19,15 +23,23 @@ git submodule update --init --recursive
 # Start with default configuration (PostgreSQL + Ollama)
 docker compose up -d
 
-# Wait for services to start (30-60 seconds)
-# Check status
-python cli.py server health
+# Wait for services to start and model to download (2-5 minutes)
+# Check system health
+curl http://localhost:8000/health
 
-# Index some documents
-python cli.py index --path . --include-docs
+# The system will automatically pull the nomic-embed-text model
+# Monitor the download progress:
+docker logs -f toolkit-rag-ollama-init-1
 
-# Search documents
-python cli.py search "installation guide"
+# Test document indexing
+curl -X POST "http://localhost:8000/embed" \
+  -F "file=@README.md" \
+  -F "file_id=readme"
+
+# Test search functionality
+curl -X POST "http://localhost:8000/query_multiple" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "installation", "file_ids": ["readme"], "k": 3}'
 ```
 
 ### Option 2: Local Installation
@@ -54,22 +66,15 @@ python rag_api/main.py
 
 ## Deployment Options
 
-### Local Development
+### Local Development (SuperClaude Integration)
 - **Database**: PostgreSQL with pgvector extension
-- **Embeddings**: Ollama (local models)
-- **Use case**: Development, testing, offline usage
+- **Embeddings**: Ollama with nomic-embed-text model
+- **Container Names**: superclaude-* for easy identification
+- **Use case**: SuperClaude framework integration
 
 ```bash
-docker compose -f docker/docker-compose.local.yml up -d
-```
-
-### TEI Embeddings
-- **Database**: PostgreSQL with pgvector extension  
-- **Embeddings**: Text Embeddings Inference (TEI) server
-- **Use case**: High-performance embeddings, GPU acceleration
-
-```bash
-docker compose -f docker/docker-compose.tei.yml up -d
+# Default configuration optimized for SuperClaude
+docker compose up -d
 ```
 
 ### OpenAI Integration
@@ -79,8 +84,17 @@ docker compose -f docker/docker-compose.tei.yml up -d
 
 ```bash
 # Set OpenAI API key
-export OPENAI_API_KEY="your-api-key"
+export RAG_OPENAI_API_KEY="your-api-key"
 docker compose -f docker/docker-compose.openai.yml up -d
+```
+
+### TEI Embeddings
+- **Database**: PostgreSQL with pgvector extension  
+- **Embeddings**: Text Embeddings Inference (TEI) server
+- **Use case**: High-performance embeddings, GPU acceleration
+
+```bash
+docker compose -f docker/docker-compose.tei.yml up -d
 ```
 
 ### Production Deployment
@@ -166,10 +180,21 @@ docker compose restart
 docker exec -it toolkit-rag-postgres psql -U admin -d toolkit_rag -c "SELECT 1;"
 ```
 
-**Ollama model not found:**
+**Ollama model download fails:**
 ```bash
-# Pull embedding model
-docker exec -it toolkit-rag-ollama ollama pull nomic-embed-text
+# Check network connectivity to Ollama registry
+curl -I https://registry.ollama.ai
+
+# If connection fails, try:
+# 1. Different network (mobile hotspot)
+# 2. VPN connection
+# 3. Different DNS servers
+
+# Manual model pull
+docker exec superclaude-ollama ollama pull nomic-embed-text
+
+# Check available models
+docker exec superclaude-ollama ollama list
 ```
 
 **Port conflicts:**

@@ -29,9 +29,15 @@ This guide covers production deployment strategies for Toolkit-RAG in various en
 **Setup:**
 ```bash
 # Single server with Docker Compose
-git clone https://github.com/ersantana361/toolkit-rag.git
+git clone --recursive https://github.com/ersantana361/toolkit-rag.git
 cd toolkit-rag
 docker compose up -d
+
+# Wait for model download (may take 2-5 minutes)
+docker logs -f toolkit-rag-ollama-init-1
+
+# Verify system health
+curl http://localhost:8000/health
 ```
 
 ### 2. Microservices Architecture
@@ -91,8 +97,10 @@ docker compose up -d
 version: '3.8'
 
 services:
-  rag-api:
-    image: toolkit-rag:latest
+  superclaude-rag:
+    build:
+      context: ./rag_api
+      dockerfile: Dockerfile
     deploy:
       replicas: 3
       resources:
@@ -103,12 +111,15 @@ services:
           cpus: '1.0'
           memory: 2G
     environment:
-      - DB_HOST=postgres-primary
-      - DB_POOL_SIZE=20
-      - DB_MAX_OVERFLOW=10
-      - EMBEDDINGS_MODEL=openai
+      - DB_HOST=superclaude-postgres
+      - DB_PORT=5432
+      - POSTGRES_DB=superclaude_rag
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - VECTOR_DB_TYPE=pgvector
+      - EMBEDDINGS_PROVIDER=openai
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET}
       - LOG_LEVEL=INFO
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
